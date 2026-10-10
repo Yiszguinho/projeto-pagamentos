@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MamãoPay — Protótipo de checkout</title>
+  <style>
+    :root {
+      --navy: #123c2f;
+      --ink: #173f32;
+      --muted: #58766b;
+      --line: #e4e9df;
+      --green: #15965f;
+      --green-dark: #087747;
+      --orange: #ff7a24;
+      --orange-light: #ffb64d;
+      --blue: #187b57;
+      --surface: #ffffff;
+      --background: #faf7ef;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--ink);
+      background: linear-gradient(135deg, #fffdf8 0%, var(--background) 100%);
+    }
+
+    .topbar {
+      min-height: 76px;
+      padding: 0 clamp(20px, 4.5vw, 68px);
+      display: flex;
+      align-items: center;
+      gap: 34px;
+      color: white;
+      background: var(--navy);
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 25px;
+      font-weight: 750;
+      letter-spacing: -1px;
+      white-space: nowrap;
+    }
+    .brand-mark {
+      display: inline-flex;
+      width: 48px;
+      height: 48px;
+      flex: 0 0 48px;
+      align-items: center;
+      justify-content: center;
+    }
+    .brand-mark svg { display: block; width: 100%; height: 100%; }
+    .brand span span { color: var(--orange); }
+    nav { display: flex; gap: 30px; margin-left: 35px; }
+    nav a, .secure { color: #edf3fb; text-decoration: none; font-size: 14px; }
+    .secure { margin-left: auto; display: flex; gap: 9px; align-items: center; }
+    .secure-icon { color: var(--orange); font-size: 18px; }
+
+    .layout {
+      width: min(1400px, calc(100% - 48px));
+      margin: 40px auto 70px;
+      display: grid;
+      grid-template-columns: minmax(0, 1.65fr) minmax(320px, 1fr);
+      gap: 24px;
+      align-items: start;
+    }
+    .panel {
+      background: var(--surface);
+      border: 1px solid #edf1f6;
+      border-radius: 14px;
+      box-shadow: 0 8px 28px rgba(25, 45, 75, 0.045);
+    }
+    .checkout { padding: clamp(24px, 3vw, 38px); }
+    .back {
+      color: var(--green-dark);
+      text-decoration: none;
+      font-size: 14px;
+      display: inline-block;
+      margin-bottom: 18px;
+    }
+    h1 { font-size: clamp(25px, 2.4vw, 31px); letter-spacing: -0.8px; margin: 0 0 12px; }
+    .intro { color: var(--muted); line-height: 1.7; max-width: 680px; margin: 0 0 28px; }
+
+    /* Os radios controlam os métodos sem JavaScript. */
+    .method-input { position: absolute; opacity: 0; pointer-events: none; }
+    .methods {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 16px;
+      margin-bottom: 30px;
+    }
+    .method {
+      min-height: 116px;
+      padding: 17px 16px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 13px;
+      border: 1px solid var(--line);
+      border-radius: 11px;
+      cursor: pointer;
+      transition: border-color .18s, background .18s, transform .18s;
+    }
+    .method:hover { border-color: #9eb4cf; transform: translateY(-1px); }
+    .method-top { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+    .method-icon { color: #42638d; font-size: 23px; font-weight: 800; }
+    .radio-dot { width: 19px; height: 19px; border: 2px solid #d4deeb; border-radius: 50%; }
+    .method strong { font-size: 15px; }
+    .method small { color: var(--muted); font-size: 13px; }
+    #pix:checked ~ .methods label[for="pix"],
+    #card:checked ~ .methods label[for="card"],
+    #boleto:checked ~ .methods label[for="boleto"] {
+      border: 1.5px solid var(--green);
+      background: #f2fbf3;
+    }
+    #pix:checked ~ .methods label[for="pix"] .radio-dot,
+    #card:checked ~ .methods label[for="card"] .radio-dot,
+    #boleto:checked ~ .methods label[for="boleto"] .radio-dot {
+      border: 5px solid var(--green);
+    }
+
+    .payment-content { display: none; }
+    #pix:checked ~ .payment-panels .pix-content,
+    #card:checked ~ .payment-panels .card-content,
+    #boleto:checked ~ .payment-panels .boleto-content { display: block; }
+    h2 { font-size: 20px; letter-spacing: -0.3px; margin: 0 0 15px; }
+    .pix-box {
+      display: flex;
+      align-items: center;
+      gap: 25px;
+      padding: 20px;
+      background: #f1f8ef;
+      border-radius: 11px;
+      margin-bottom: 25px;
+    }
+    .qr-placeholder {
+      flex: 0 0 125px;
+      height: 125px;
+      display: grid;
+      place-items: center;
+      padding: 12px;
+      border: 1px dashed #9dc9a8;
+      border-radius: 8px;
+      color: var(--green-dark);
+      background: white;
+      font-size: 12px;
+      font-weight: 750;
+      text-align: center;
+    }
+    .steps { margin: 0; padding-left: 20px; color: #526b8c; line-height: 1.9; font-size: 14px; }
+    .note { color: var(--muted); font-size: 12px; margin-top: 12px; }
+    .code-label { color: var(--muted); font-size: 14px; margin-bottom: 9px; }
+    .code-row {
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      min-height: 52px;
+      padding: 12px 15px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      color: #627898;
+      font-size: 13px;
+      overflow-wrap: anywhere;
+    }
+    .copy-hint { color: var(--green-dark); white-space: nowrap; font-weight: 650; }
+    .fake-form { display: grid; gap: 14px; }
+    .fake-form label { color: var(--muted); font-size: 13px; display: grid; gap: 7px; }
+    .fake-form input {
+      width: 100%; padding: 13px 14px; border: 1px solid var(--line);
+      border-radius: 8px; font: inherit; color: var(--ink); background: white;
+    }
+    .demo-warning {
+      margin-top: 20px; padding: 12px 14px; border-radius: 8px;
+      color: #82501b; background: #fff4df; font-size: 12px; line-height: 1.5;
+    }
+    .footer-links {
+      border-top: 1px solid #edf1f6; margin-top: 27px; padding-top: 23px;
+      display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+    }
+    .footer-links a { color: var(--green-dark); font-size: 13px; text-decoration: none; }
+
+    .summary { padding: 31px; }
+    .summary h2 { font-size: 23px; margin-bottom: 24px; }
+    .product { display: flex; align-items: center; gap: 15px; padding-bottom: 28px; border-bottom: 1px solid var(--line); }
+    .product-art {
+      flex: 0 0 66px; height: 66px; display: grid; place-items: center;
+      border-radius: 10px; background: linear-gradient(135deg, #111827, #3e4a5e);
+      color: white; font-size: 29px;
+    }
+    .product-info { flex: 1; min-width: 0; }
+    .product-info strong { display: block; font-size: 15px; margin-bottom: 6px; }
+    .product-info small { color: var(--muted); font-size: 12px; }
+    .price { font-size: 15px; white-space: nowrap; }
+    .line-item { display: flex; justify-content: space-between; gap: 16px; color: var(--muted); font-size: 14px; margin: 17px 0; }
+    .line-item span:last-child { color: var(--ink); white-space: nowrap; }
+    .total {
+      border-top: 1px solid var(--line); margin-top: 25px; padding-top: 22px;
+      display: flex; align-items: center; justify-content: space-between; gap: 15px;
+      font-weight: 750; font-size: 18px;
+    }
+    .total strong { font-size: 27px; letter-spacing: -0.7px; white-space: nowrap; }
+    .security-box {
+      display: flex; gap: 13px; margin-top: 27px; padding: 19px;
+      border-radius: 10px; background: #eff7ee;
+    }
+    .shield { font-size: 25px; color: var(--green); }
+    .security-box strong { font-size: 14px; color: var(--green-dark); }
+    .security-box p { margin: 7px 0 0; font-size: 12px; line-height: 1.6; color: var(--muted); }
+    .powered { text-align: center; color: #8191a8; font-size: 12px; margin-top: 23px; }
+    .powered strong { color: var(--ink); }
+
+    @media (max-width: 900px) {
+      .layout { grid-template-columns: 1fr; width: min(720px, calc(100% - 32px)); margin-top: 24px; }
+      .summary { order: -1; }
+      nav { margin-left: auto; gap: 16px; }
+      .secure { display: none; }
+    }
+    @media (max-width: 600px) {
+      .topbar { padding: 18px 20px; flex-wrap: wrap; gap: 14px; }
+      .brand { font-size: 22px; }
+      nav { width: 100%; margin: 0; justify-content: space-between; }
+      nav a { font-size: 13px; }
+      .layout { width: calc(100% - 22px); gap: 14px; margin: 14px auto 35px; }
+      .checkout, .summary { padding: 21px 18px; }
+      .methods { gap: 8px; }
+      .method { padding: 12px 9px; min-height: 112px; }
+      .method strong { font-size: 12px; }
+      .method small { font-size: 11px; }
+      .method-icon { font-size: 18px; }
+      .pix-box { flex-direction: column; align-items: flex-start; gap: 16px; }
+      .qr-placeholder { width: 112px; height: 112px; flex-basis: 112px; }
+      .total strong { font-size: 23px; }
+      .summary h2 { font-size: 21px; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 64 64" role="img" aria-label="Mamão estilizado">
+          <path d="M43 10c5-6 12-6 16-5-1 7-6 12-14 13" fill="#15965f"/>
+          <path d="M12 49C1 37 11 18 28 12 39 8 47 9 53 5c2 10-1 17-7 26C37 46 24 58 15 55c-2-1-3-3-3-6Z" fill="#ff7a24" stroke="#ffb64d" stroke-width="3" stroke-linejoin="round"/>
+          <path d="M17 45c-6-9 4-23 15-27 5-2 9-2 13-5-1 8-5 15-10 22-6 8-12 13-16 10Z" fill="#173f32"/>
+          <g fill="#ffb64d"><ellipse cx="24" cy="31" rx="2" ry="3" transform="rotate(28 24 31)"/><ellipse cx="30" cy="26" rx="2" ry="3" transform="rotate(28 30 26)"/><ellipse cx="34" cy="33" rx="2" ry="3" transform="rotate(28 34 33)"/><ellipse cx="27" cy="38" rx="2" ry="3" transform="rotate(28 27 38)"/><ellipse cx="39" cy="24" rx="2" ry="3" transform="rotate(28 39 24)"/></g>
+        </svg>
+      </span>
+      <span>Mamão<span>Pay</span></span>
+    </div>
+    <nav aria-label="Navegação principal">
+      <a href="#">Início</a>
+      <a href="#">Documentação</a>
+      <a href="#">Suporte</a>
+    </nav>
+    <div class="secure"><span class="secure-icon">◆</span> Protótipo de checkout</div>
+  </header>
+
+  <main class="layout">
+    <section class="panel checkout">
+      <a class="back" href="#">← Voltar</a>
+      <h1>Escolha a forma de <span style="color:var(--orange)">pagamento</span></h1>
+      <p class="intro">Selecione o método de pagamento que preferir. Esta página é uma demonstração visual de um checkout.</p>
+
+      <input class="method-input" type="radio" name="payment" id="pix" checked>
+      <input class="method-input" type="radio" name="payment" id="card">
+      <input class="method-input" type="radio" name="payment" id="boleto">
+
+      <div class="methods">
+        <label class="method" for="pix">
+          <span class="method-top"><span class="method-icon">▦</span><span class="radio-dot"></span></span>
+          <strong>Pix</strong>
+          <small>Aprovação imediata</small>
+        </label>
+        <label class="method" for="card">
+          <span class="method-top"><span class="method-icon">▰</span><span class="radio-dot"></span></span>
+          <strong>Cartão de crédito</strong>
+          <small>Até 12x (exemplo)</small>
+        </label>
+        <label class="method" for="boleto">
+          <span class="method-top"><span class="method-icon">▥</span><span class="radio-dot"></span></span>
+          <strong>Boleto bancário</strong>
+          <small>Prazo ilustrativo</small>
+        </label>
+      </div>
+
+      <div class="payment-panels">
+        <section class="payment-content pix-content">
+          <h2>Pagamento via Pix</h2>
+          <div class="pix-box">
+            <div class="qr-placeholder">QR CODE<br>DEMO<br><small>Não pagável</small></div>
+            <div>
+              <ol class="steps">
+                <li>Abra o aplicativo do seu banco</li>
+                <li>Escaneie o QR Code válido do checkout</li>
+                <li>Confira os dados e confirme o pagamento</li>
+              </ol>
+              <p class="note">◷ Em uma integração real, o código seria gerado pelo provedor.</p>
+            </div>
+          </div>
+          <p class="code-label">Código Pix copia e cola (exemplo fictício)</p>
+          <div class="code-row">
+            <span>Este é um protótipo — nenhum código Pix válido foi gerado.</span>
+            <span class="copy-hint">Demonstração</span>
+          </div>
+        </section>
+
+        <section class="payment-content card-content">
+          <h2>Pagamento com cartão</h2>
+          <div class="fake-form">
+            <label>Nome impresso no cartão<input type="text" placeholder="Ex.: Maria da Silva"></label>
+            <label>Número do cartão<input type="text" placeholder="0000 0000 0000 0000"></label>
+            <label>Validade e CVV<input type="text" placeholder="MM/AA     •••"></label>
+          </div>
+          <p class="demo-warning">Campos ilustrativos. Não digite dados reais: este protótipo não processa nem protege informações de cartão.</p>
+        </section>
+
+        <section class="payment-content boleto-content">
+          <h2>Pagamento por boleto</h2>
+          <div class="code-row"><span>O boleto demonstrativo apareceria aqui após a integração.</span></div>
+          <p class="demo-warning">Nenhum boleto real foi emitido. Em produção, a cobrança deve ser criada pelo provedor de pagamentos.</p>
+        </section>
+      </div>
+
+      <div class="action-row">
+        <button class="pay-button" id="simulate-payment" type="button">Simular pagamento</button>
+        <p class="status-message" id="payment-status" role="status" aria-live="polite">Escolha um método e teste a interação.</p>
+      </div>
+      <div class="demo-warning">
+        <strong>Importante:</strong> este projeto é uma demonstração em HTML, CSS e JavaScript. Não gera cobranças, não confirma pagamentos e não está conectado a um provedor de pagamentos real.
+      </div>
+      <div class="footer-links">
+        <a href="#">← Voltar para o carrinho</a>
+        <a href="#">? Precisa de ajuda?</a>
+      </div>
+    </section>
+
+    <aside>
+      <section class="panel summary">
+        <h2>Resumo do pedido</h2>
+        <div class="product">
+          <div class="product-art" aria-hidden="true">♫</div>
+          <div class="product-info">
+            <strong>Curso de Piano Online</strong>
+            <small>Acesso vitalício + atualizações</small>
+          </div>
+          <span class="price">R$ 197,00</span>
+        </div>
+        <div class="line-item"><span>Subtotal</span><span>R$ 197,00</span></div>
+        <div class="line-item"><span id="fee-label">Taxa de processamento (Pix, exemplo)</span><span id="fee-value">R$ 0,80</span></div>
+        <div class="total"><span>Total</span><strong id="total-value">R$ 197,80</strong></div>
+        <div class="security-box">
+          <span class="shield" aria-hidden="true">◆</span>
+          <div>
+            <strong>Área de pagamento demonstrativa</strong>
+            <p>Em produção, use HTTPS, mantenha chaves secretas no servidor e valide a confirmação do pagamento no backend.</p>
+          </div>
+        </div>
+      </section>
+      <p class="powered"><span aria-hidden="true" style="color:var(--orange);font-size:16px">●</span> Feito com <strong>MamãoPay</strong> · Projeto de estudo</p>
+    </aside>
+  </main>
+
+  <script>
+    // JavaScript de demonstração: atualiza o resumo e simula o fluxo da interface.
+    // Não faz chamadas de rede e não processa pagamentos reais.
+    const subtotal = 197.00;
+    const methods = document.querySelectorAll('input[name="payment"]');
+    const feeLabel = document.getElementById('fee-label');
+    const feeValue = document.getElementById('fee-value');
+    const totalValue = document.getElementById('total-value');
+    const statusMessage = document.getElementById('payment-status');
+    const payButton = document.getElementById('simulate-payment');
+
+    const currency = value => value.toLocaleString('pt-BR', {
+      style: 'currency', currency: 'BRL'
+    });
+
+    function selectedMethod() {
+      return document.querySelector('input[name="payment"]:checked').value ||
+        document.querySelector('input[name="payment"]:checked').id;
+    }
+
+    function updateSummary() {
+      const selected = document.querySelector('input[name="payment"]:checked').id;
+      // Taxas abaixo são apenas valores fictícios para demonstrar atualização dinâmica.
+      const fees = { pix: 0.80, card: 5.90, boleto: 2.50 };
+      const labels = { pix: 'Pix', card: 'cartão (exemplo)', boleto: 'boleto (exemplo)' };
+      const fee = fees[selected];
+      feeLabel.textContent = `Taxa de processamento (${labels[selected]})`;
+      feeValue.textContent = currency(fee);
+      totalValue.textContent = currency(subtotal + fee);
+      payButton.textContent = selected === 'pix' ? 'Simular pagamento Pix' :
+        selected === 'card' ? 'Simular pagamento com cartão' : 'Simular emissão de boleto';
+      statusMessage.textContent = 'Modo de demonstração: nenhuma transação será realizada.';
+      statusMessage.dataset.kind = '';
+    }
+
+    methods.forEach(method => method.addEventListener('change', updateSummary));
+
+    payButton.addEventListener('click', () => {
+      const selected = document.querySelector('input[name="payment"]:checked').id;
+      if (selected === 'card') {
+        const fields = document.querySelectorAll('.card-content input');
+        const hasAnyInput = Array.from(fields).some(field => field.value.trim() !== '');
+        if (hasAnyInput) {
+          statusMessage.textContent = 'Demonstração: os dados não foram enviados nem processados. Não use dados reais.';
+          statusMessage.dataset.kind = 'error';
+        } else {
+          statusMessage.textContent = 'Protótipo: preencha os campos fictícios para testar a validação visual. Não use dados reais.';
+          statusMessage.dataset.kind = 'error';
+        }
+        return;
+      }
+      statusMessage.textContent = selected === 'pix'
+        ? 'Pix simulado apenas na interface. Para cobrar de verdade, conecte um backend e a API do provedor.'
+        : 'Boleto apenas ilustrativo. Nenhum boleto foi emitido.';
+      statusMessage.dataset.kind = 'success';
+    });
+
+    // Formatação demonstrativa do número do cartão; os dados ficam só no navegador.
+    const cardNumber = document.querySelector('.card-content input[placeholder^="0000"]');
+    if (cardNumber) {
+      cardNumber.addEventListener('input', () => {
+        const digits = cardNumber.value.replace(/\D/g, '').slice(0, 16);
+        cardNumber.value = digits.replace(/(.{4})/g, '$1 ').trim();
+      });
+    }
+
+    updateSummary();
+  </script>
+</body>
+</html>
